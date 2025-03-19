@@ -5,18 +5,33 @@ import {
   usePersistentContext,
 } from "../src/PersistentContext";
 
-// Test Component
+// Define type for test
+interface TestState {
+  user?: string;
+  count?: number;
+}
+
+// Test Component with typed context
 const TestComponent = () => {
-  const { state, setState } = usePersistentContext();
+  const { state, setState } = usePersistentContext<TestState>();
 
   const handleChangeUser = () => {
-    setState({ user: "New User" });
+    setState({ ...state, user: "New User" });
+  };
+
+  const handleIncrement = () => {
+    setState((prevState) => ({
+      ...prevState,
+      count: (prevState.count || 0) + 1,
+    }));
   };
 
   return (
     <div>
       <p data-testid="username">{state.user || "Guest"}</p>
+      <p data-testid="count">{state.count || 0}</p>
       <button onClick={handleChangeUser}>Change User</button>
+      <button onClick={handleIncrement}>Increment</button>
     </div>
   );
 };
@@ -26,6 +41,14 @@ describe("PersistentContext with localStorage and sessionStorage", () => {
     // Clear both localStorage and sessionStorage before each test
     localStorage.clear();
     sessionStorage.clear();
+    
+    // Mock console.error to prevent error output during tests
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    // Restore console.error
+    jest.restoreAllMocks();
   });
 
   it("loads state from localStorage", () => {
@@ -37,7 +60,7 @@ describe("PersistentContext with localStorage and sessionStorage", () => {
 
     // Act: Render the component with PersistentProvider
     render(
-      <PersistentProvider
+      <PersistentProvider<TestState>
         storageKey="local-storage-key"
         storageType="localStorage"
       >
@@ -52,7 +75,7 @@ describe("PersistentContext with localStorage and sessionStorage", () => {
   it("saves state to localStorage", () => {
     // Arrange: Render the component with PersistentProvider
     render(
-      <PersistentProvider
+      <PersistentProvider<TestState>
         storageKey="local-storage-key"
         storageType="localStorage"
       >
@@ -80,7 +103,7 @@ describe("PersistentContext with localStorage and sessionStorage", () => {
 
     // Act: Render the component with PersistentProvider
     render(
-      <PersistentProvider
+      <PersistentProvider<TestState>
         storageKey="session-storage-key"
         storageType="sessionStorage"
       >
@@ -95,7 +118,7 @@ describe("PersistentContext with localStorage and sessionStorage", () => {
   it("saves state to sessionStorage", () => {
     // Arrange: Render the component with PersistentProvider
     render(
-      <PersistentProvider
+      <PersistentProvider<TestState>
         storageKey="session-storage-key"
         storageType="sessionStorage"
       >
@@ -112,5 +135,76 @@ describe("PersistentContext with localStorage and sessionStorage", () => {
     expect(sessionStorage.getItem("session-storage-key")).toBe(
       JSON.stringify({ user: "New User" })
     );
+  });
+
+  it("uses initialState when no stored state exists", () => {
+    // Act: Render the component with PersistentProvider and initialState
+    render(
+      <PersistentProvider<TestState>
+        storageKey="init-test"
+        initialState={{ user: "Initial User", count: 5 }}
+      >
+        <TestComponent />
+      </PersistentProvider>
+    );
+
+    // Assert: Verify the state shows the initial values
+    expect(screen.getByTestId("username")).toHaveTextContent("Initial User");
+    expect(screen.getByTestId("count")).toHaveTextContent("5");
+  });
+
+  it("correctly updates state using functional updates", () => {
+    // Arrange: Render the component with PersistentProvider
+    render(
+      <PersistentProvider<TestState>
+        storageKey="functional-updates"
+        initialState={{ count: 0 }}
+      >
+        <TestComponent />
+      </PersistentProvider>
+    );
+
+    // Act: Simulate multiple increments 
+    act(() => {
+      fireEvent.click(screen.getByText("Increment"));
+      fireEvent.click(screen.getByText("Increment"));
+      fireEvent.click(screen.getByText("Increment"));
+    });
+
+    // Assert: Verify count was updated correctly
+    expect(screen.getByTestId("count")).toHaveTextContent("3");
+    expect(localStorage.getItem("functional-updates")).toBe(
+      JSON.stringify({ count: 3 })
+    );
+  });
+
+  it("handles storage errors gracefully", () => {
+    // Arrange: Mock storage.getItem to throw error
+    jest.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("Storage error");
+    });
+
+    // Act: Render the component
+    render(
+      <PersistentProvider<TestState>
+        initialState={{ user: "Fallback User" }}
+      >
+        <TestComponent />
+      </PersistentProvider>
+    );
+
+    // Assert: Verify fallback to initialState
+    expect(screen.getByTestId("username")).toHaveTextContent("Fallback User");
+    expect(console.error).toHaveBeenCalledWith(
+      "Error retrieving state from storage:",
+      expect.any(Error)
+    );
+  });
+
+  it("throws error when hook is used outside provider", () => {
+    // Arrange & Act & Assert
+    expect(() => {
+      render(<TestComponent />);
+    }).toThrow("usePersistentContext must be used within a PersistentProvider");
   });
 });

@@ -1,24 +1,37 @@
 # Persistent Context
 
-A React context provider for persisting state in `localStorage` or `sessionStorage`.
+[![npm version](https://img.shields.io/npm/v/persistent-context.svg)](https://www.npmjs.com/package/persistent-context)
+[![license](https://img.shields.io/npm/l/persistent-context.svg)](https://github.com/deiberchacon/persistent-context/blob/main/LICENSE)
+
+A lightweight React context provider for persisting state in `localStorage` or `sessionStorage` with TypeScript support.
+
+## Features
+
+- 🔄 Persist React context in localStorage or sessionStorage
+- 📦 Lightweight with TypeScript support and zero dependencies
+- 🌳 Modern package (ESM/CJS) with full browser compatibility
 
 ## Installation
 
-To install the package, run:
-
 ```bash
+# npm
 npm install persistent-context
+
+# yarn
+yarn add persistent-context
+
+# pnpm
+pnpm add persistent-context
 ```
 
 ## Usage
 
-### 1. Wrap your app with `PersistentProvider`
+### Basic Usage with JavaScript
 
-To start using the context, wrap your app with the `PersistentProvider` component. You can choose the storage type (`localStorage` or `sessionStorage`) and the storage key.
+```jsx
+import { PersistentProvider, usePersistentContext } from 'persistent-context';
 
-```javascript
-import { PersistentProvider } from "persistent-context";
-
+// Wrap your app or component with PersistentProvider
 const App = () => {
   return (
     <PersistentProvider storageKey="app-state" storageType="localStorage">
@@ -26,15 +39,8 @@ const App = () => {
     </PersistentProvider>
   );
 };
-```
 
-### 2. Use the `usePersistentContext` hook to access and update the state
-
-Inside your components, you can access and modify the persisted state using the usePersistentContext hook.
-
-```javascript
-import { usePersistentContext } from "persistent-context";
-
+// Use the context in your components
 const YourComponent = () => {
   const { state, setState } = usePersistentContext();
 
@@ -51,49 +57,148 @@ const YourComponent = () => {
 };
 ```
 
-## API
+### TypeScript Usage with Generic Types
 
-### `PersistentProvider`
+```tsx
+import { PersistentProvider, usePersistentContext } from 'persistent-context';
 
-- `storageKey`: The key under which the state is saved in `localStorage` or `sessionStorage`. Default is `"persistent-context"`.
-- `storageType`: Choose either `"localStorage"` or `"sessionStorage"` for where the state should be stored. Default is `"localStorage"`.
+// Define your state interface
+interface UserState {
+  user?: string;
+  theme?: 'light' | 'dark';
+  notifications?: boolean;
+}
 
-### `usePersistentContext`
-
-- Returns an object with:
-  - `state`: The current state.
-  - `setState`: A function to update the state.
-
-## Example
-
-Here’s a full example using `PersistentProvider` and `usePersistentContext`:
-
-```javascript
-import React from "react";
-import { PersistentProvider, usePersistentContext } from "persistent-context";
-
+// Provide type to the provider (with initial state)
 const App = () => {
   return (
-    <PersistentProvider storageKey="user-state" storageType="sessionStorage">
-      <UserProfile />
+    <PersistentProvider<UserState> 
+      storageKey="user-settings"
+      storageType="localStorage"
+      initialState={{ theme: 'light', notifications: true }}
+    >
+      <UserSettings />
     </PersistentProvider>
   );
 };
 
-const UserProfile = () => {
-  const { state, setState } = usePersistentContext();
+// Use the typed context in your components
+const UserSettings = () => {
+  const { state, setState } = usePersistentContext<UserState>();
 
-  const updateUser = () => {
-    setState({ user: "Jane Doe" });
+  // Type-safe state usage
+  const toggleTheme = () => {
+    setState(prev => ({
+      ...prev,
+      theme: prev.theme === 'light' ? 'dark' : 'light'
+    }));
   };
 
   return (
     <div>
-      <h1>{state.user || "Guest"}</h1>
-      <button onClick={updateUser}>Set User</button>
+      <h1>Current Theme: {state.theme}</h1>
+      <button onClick={toggleTheme}>Toggle Theme</button>
     </div>
   );
 };
-
-export default App;
 ```
+
+## API
+
+### `PersistentProvider`
+
+Component that provides the persistent context.
+
+```tsx
+<PersistentProvider<T>
+  storageKey?: string;
+  storageType?: "localStorage" | "sessionStorage";
+  initialState?: T;
+>
+  {children}
+</PersistentProvider>
+```
+
+#### Props
+
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `storageKey` | `string` | `"persistent-context"` | Key used for storing the state in browser storage |
+| `storageType` | `"localStorage"` \| `"sessionStorage"` | `"localStorage"` | Storage type to use |
+| `initialState` | `T` | `{}` | Initial state to use when no persisted state exists |
+| `children` | `React.ReactNode` | (required) | React children |
+
+### `usePersistentContext<T>()`
+
+Hook to access the persistent context state.
+
+```tsx
+const { state, setState } = usePersistentContext<T>();
+```
+
+#### Returns
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `state` | `T` | The current state |
+| `setState` | `React.Dispatch<React.SetStateAction<T>>` | Function to update the state (supports both direct and functional updates) |
+
+## Example Application
+
+```tsx
+import React from 'react';
+import { PersistentProvider, usePersistentContext } from 'persistent-context';
+
+interface TodoState {
+  todos: Array<{ id: number; text: string; completed: boolean }>;
+  filter: 'all' | 'active' | 'completed';
+}
+
+const initialState: TodoState = {
+  todos: [],
+  filter: 'all'
+};
+
+const TodoApp = () => {
+  return (
+    <PersistentProvider<TodoState> 
+      storageKey="todo-app"
+      initialState={initialState}
+    >
+      <TodoList />
+      <AddTodo />
+      <FilterButtons />
+    </PersistentProvider>
+  );
+};
+
+const TodoList = () => {
+  const { state } = usePersistentContext<TodoState>();
+  
+  const filteredTodos = state.todos.filter(todo => {
+    if (state.filter === 'active') return !todo.completed;
+    if (state.filter === 'completed') return todo.completed;
+    return true;
+  });
+  
+  return (
+    <ul>
+      {filteredTodos.map(todo => (
+        <TodoItem key={todo.id} todo={todo} />
+      ))}
+    </ul>
+  );
+};
+
+// ... Additional components
+
+export default TodoApp;
+```
+
+## Browser Compatibility
+
+Works in all modern browsers that support localStorage/sessionStorage (IE9+).
+
+## License
+
+MIT © [Deiber Chacon](LICENSE)

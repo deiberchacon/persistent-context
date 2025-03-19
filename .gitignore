@@ -1,25 +1,31 @@
-# Node modules
+# Dependencies
 node_modules/
 
-# Build output
+# Build outputs
 dist/
+coverage/
+
+# Logs and debug
+*.log
+npm-debug.log*
+
+# Environment and editor
+.env*
+.vscode/
+.idea/
+
+# Misc
+.npm
+*.tsbuildinfo
+
+# Build output
 build/
 
 # TypeScript
 *.tsbuildinfo
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
 # Dependency directories
 jspm_packages/
-
-# Optional npm cache directory
-.npm/
 
 # Optional eslint cache
 .eslintcache
@@ -28,15 +34,10 @@ jspm_packages/
 .node_repl_history
 
 # dotenv environment variables file
-.env
 .env.local
 .env.development.local
 .env.test.local
 .env.production.local
 
 # Jest
-coverage/
 jest/
-
-.vscode/
-.idea/
