@@ -1,7 +1,7 @@
 # Persistent Context
 
 [![npm version](https://img.shields.io/npm/v/persistent-context.svg)](https://www.npmjs.com/package/persistent-context)
-[![license](https://img.shields.io/npm/l/persistent-context.svg)](https://github.com/deiberchacon/persistent-context/blob/main/LICENSE)
+[![license](https://img.shields.io/npm/l/persistent-context.svg)](https://github.com/deiberchacon/persistent-context/blob/master/LICENSE)
 
 A lightweight React context provider for persisting state in `localStorage` or `sessionStorage` with TypeScript support.
 
